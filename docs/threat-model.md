@@ -149,3 +149,13 @@ The following remain design decisions until explicitly specified and tested:
 
 No control described here should be considered implemented solely because it is documented.
 
+
+### Tool Forge Audit-Linkage Invariant
+
+- Before a tool version exists, candidate lifecycle events may reference the candidate only.
+- Once a forged tool version exists, events concerning that version must reference both the originating candidate and the resulting tool version.
+- Events for developer-registered tools may reference a tool version without a Tool Forge candidate.
+- The application must verify that a referenced tool version belongs to the referenced candidate before writing an audit event.
+- Audit events must be append-only. Relevant validation, approval, promotion, rejection, and revocation actions must create durable event records rather than overwrite prior history.
+
+These invariants must be enforced and tested in the Tool Forge audit and promotion services. Database-level protections must be evaluated during database implementation.
