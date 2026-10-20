@@ -53,7 +53,7 @@ CREATE TABLE run_events (
     run_id UUID NOT NULL REFERENCES runs(id),
     event_type TEXT NOT NULL,
     event_data JSONB NOT NULL DEFAULT '{}'::jsonb,
-    model_id UUID,
+    model_id UUID REFERENCES models(id),
     tokens_input INTEGER,
     tokens_output INTEGER,
     estimated_cost NUMERIC(14, 8),
