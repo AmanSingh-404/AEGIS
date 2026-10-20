@@ -234,6 +234,21 @@ CREATE TABLE capability_gaps (
     resolved_at TIMESTAMPTZ
 );
 
+
+ALTER TABLE capability_gaps
+    ADD CONSTRAINT chk_capability_gaps_status
+    CHECK (
+        status IN (
+            'detected',
+            'investigating',
+            'tool_candidate_created',
+            'resolved',
+            'unresolved',
+            'dismissed'
+        )
+    );
+
+
 CREATE TABLE tool_candidates (
     id UUID PRIMARY KEY,
     capability_gap_id UUID NOT NULL REFERENCES capability_gaps(id),
