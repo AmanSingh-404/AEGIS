@@ -81,6 +81,7 @@ CREATE TABLE models (
     UNIQUE (provider, model_name)
 );
 
+
 CREATE TABLE tools (
     id UUID PRIMARY KEY,
     name TEXT NOT NULL,
@@ -94,8 +95,10 @@ CREATE TABLE tools (
     origin TEXT NOT NULL CHECK (origin IN ('registered', 'forged')),
     version TEXT NOT NULL,
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_tools_name_version UNIQUE (name, version)
 );
+
 
 CREATE TABLE approvals (
     id UUID PRIMARY KEY,
