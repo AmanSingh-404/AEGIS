@@ -159,3 +159,13 @@ No control described here should be considered implemented solely because it is 
 - Audit events must be append-only. Relevant validation, approval, promotion, rejection, and revocation actions must create durable event records rather than overwrite prior history.
 
 These invariants must be enforced and tested in the Tool Forge audit and promotion services. Database-level protections must be evaluated during database implementation.
+
+### Project Ownership and Membership Consistency
+
+- `projects.owner_id` is the authoritative record of project ownership.
+- The project owner's access must remain consistent with the project's membership and authorization model.
+- Project creation must establish the owner and the corresponding owner membership in the same database transaction.
+- Ownership transfers must update the ownership record and corresponding membership state atomically.
+- The application must reject inconsistent ownership or membership changes.
+- Authorization checks must not rely solely on a user's membership role; they must also respect the authoritative project ownership record.
+- These rules must be covered by automated tests before project-level authorization is considered complete.
