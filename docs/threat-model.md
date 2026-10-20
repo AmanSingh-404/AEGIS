@@ -69,3 +69,83 @@
 - Which external integrations are permitted to access production systems?
 
 These questions remain unresolved until the architecture and configuration are explicitly defined and verified.
+
+
+
+## 5. Jev Decision Layer and Tool Forge Specific Risks
+
+### 5.1 Jev Decision Layer
+
+| ID | Risk | Worst-case failure | Required gate or mitigation |
+|---|---|---|---|
+| J-01 | Overconfident incorrect decision | A wrong classification influences routing, scoring, or an action pre-screen | Confidence thresholds, held-out calibration tests, and escalation to System 2 or human review |
+| J-02 | Adversarial state manipulation | Crafted state data causes Jev to produce a misleading answer | Validate and bound state inputs; treat supplied state as potentially adversarial; enforce deterministic policy independently |
+| J-03 | False low-risk classification | Jev classifies a dangerous action as safe | Policy Engine independently evaluates the action and makes the binding allow/deny/approval decision |
+| J-04 | Provider outage or access interruption | Jev calls fail and interrupt task execution | Swappable DecisionProvider interface and tested LocalDecisionProvider fallback |
+| J-05 | Confidence threshold misconfiguration | Too many unsafe decisions are accepted, or necessary escalations are missed | Configurable thresholds, conservative defaults, calibration evaluation, and versioned configuration |
+| J-06 | Unreliable decision telemetry | Incorrect conclusions are drawn about agreement, calibration, latency, or cost | Log state summary, question type, answer, confidence, escalation, outcome, and agreement |
+| J-07 | Proprietary provider assumptions | Provider changes break the rest of the application | Keep Jev behind the DecisionProvider interface; do not depend on undocumented internals |
+| J-08 | Unverified performance claims | Project reports claim speed or cost improvements not measured on AEGIS workloads | Compare measured latency and cost against an LLM-only baseline |
+
+**Jev enforcement rules**
+
+1. Jev is advisory; it never replaces deterministic Policy Engine enforcement or required human approval.
+2. Low confidence must trigger the configured escalation or fallback path.
+3. A provider failure must not silently convert an uncertain decision into permission to execute.
+4. Decision logs must support independent calibration and agreement analysis.
+5. Evaluate Jev on held-out labeled data and crafted/adversarial states.
+6. Measure actual AEGIS latency and cost; do not present provider-reported gains as AEGIS results.
+
+### 5.2 Tool Forge
+
+| ID | Risk | Worst-case failure | Required gate or mitigation |
+|---|---|---|---|
+| F-01 | Malicious candidate generation | Generated code steals secrets, modifies files, or attempts network access | Isolated sandbox, restricted capabilities, resource limits, and static security analysis |
+| F-02 | Unsafe candidate passes incomplete tests | A vulnerable tool is promoted and executes against real systems | Independent sandbox tests, static analysis, deterministic promotion gate, and required approval |
+| F-03 | Capability-gap prompt injection | Untrusted task descriptions or API schemas manipulate generated code | Treat descriptions and schemas as untrusted; validate generated code and tool contracts independently |
+| F-04 | Jev incorrectly pre-screens a candidate | A risky candidate is treated as low risk | Jev pre-screen is advisory; deterministic security and policy gates remain mandatory |
+| F-05 | Live side effects during candidate testing | Candidate code modifies production data or calls a live endpoint before approval | Mock or staging targets, sandbox isolation, deny-by-default network access, and no production credentials |
+| F-06 | Forged tool permission escalation | A candidate requests broader privileges than the task requires | Least-privilege permissions, schema validation, policy-configured risk tiers, and execution-time authorization |
+| F-07 | Unbounded forging loop | Repeated failed candidates exhaust compute, time, or provider budgets | Hard candidate-attempt, sandbox-time, retry, and task-budget limits |
+| F-08 | Compromised or vulnerable promoted version | A previously trusted tool continues causing harm | Version history, revocation, disabled-tool checks at execution time, and incident audit records |
+| F-09 | Unsafe promotion or approval bypass | Candidate code reaches the trusted registry without satisfying required gates | Explicit promotion state machine; deny-by-default transitions; approval bound to the candidate version and risk context |
+| F-10 | Incomplete provenance | The team cannot reconstruct how a tool was generated, tested, or promoted | Record source gap, candidate version, schema, test results, static-analysis results, policy outcome, approval, and promotion/revocation history |
+
+**Tool Forge enforcement rules**
+
+1. Candidate generation does not grant execution privileges.
+2. Candidate tools must be tested in isolation before promotion.
+3. Static security analysis and deterministic policy checks are mandatory.
+4. Human approval is required wherever the configured risk policy requires it.
+5. Jev cannot waive sandbox, policy, or approval requirements.
+6. Candidate generation and sandbox execution must have hard resource limits.
+7. Promoted tools must be versioned, auditable, and revocable.
+8. Unsafe-promotion rate is a critical evaluation metric; the target is zero.
+
+### 5.3 Verification requirements
+
+The following tests must exist before the corresponding capabilities are considered complete:
+
+- Force Jev to return a low-risk answer for a known high-risk action; verify that the Policy Engine still blocks or requires approval.
+- Simulate Jev provider failure; verify that the configured local fallback works.
+- Supply a crafted/adversarial state; record the result and verify escalation behavior where required.
+- Attempt to promote a candidate that fails sandbox tests or static analysis; promotion must be rejected.
+- Attempt live side effects from candidate-tool testing; the sandbox and network controls must prevent them.
+- Exhaust the configured Tool Forge candidate-attempt limit; verify that forging stops.
+- Revoke a promoted tool; verify that subsequent execution attempts are denied.
+- Verify that the decision log and tool-version history contain the records needed for security review and evaluation.
+
+### 5.4 Outstanding implementation decisions
+
+The following remain design decisions until explicitly specified and tested:
+
+- Sandbox technology and isolation strength.
+- Risk tiers and the actions requiring mandatory approval.
+- Jev confidence thresholds and escalation policy by decision type.
+- Local fallback behavior when the provider and fallback are both unavailable.
+- Tool Forge candidate, time, and budget limits.
+- Promotion-state transitions and approval binding.
+- Audit-record integrity and retention requirements.
+
+No control described here should be considered implemented solely because it is documented.
+
