@@ -169,3 +169,12 @@ These invariants must be enforced and tested in the Tool Forge audit and promoti
 - The application must reject inconsistent ownership or membership changes.
 - Authorization checks must not rely solely on a user's membership role; they must also respect the authoritative project ownership record.
 - These rules must be covered by automated tests before project-level authorization is considered complete.
+
+### Project Ownership Enforcement
+
+- Project creation must create the project and its owner membership atomically.
+- Ownership transfer must update the authoritative `projects.owner_id` and corresponding membership roles atomically.
+- The application must validate that the project owner and the membership role agree before completing either operation.
+- Automated tests must cover project creation, ownership transfer, failed transactions, and attempts to create inconsistent ownership.
+- During PostgreSQL implementation, evaluate database-level enforcement, including whether a constraint trigger is warranted.
+- Until these controls are implemented and tested, project ownership consistency must not be treated as enforced.
