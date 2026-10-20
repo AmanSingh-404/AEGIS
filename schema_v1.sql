@@ -247,5 +247,40 @@ CREATE INDEX idx_tool_versions_tool ON tool_versions(tool_id);
 CREATE INDEX idx_decision_log_created ON decision_log(created_at);
 CREATE INDEX idx_decision_log_run ON decision_log(run_id);
 
+
+-- Additional indexes for foreign-key lookup and join patterns.
+-- Review query plans and workload before production deployment.
+
+CREATE INDEX idx_run_events_model
+    ON run_events(model_id);
+
+CREATE INDEX idx_approvals_run
+    ON approvals(run_id);
+
+CREATE INDEX idx_approvals_requested_by
+    ON approvals(requested_by);
+
+CREATE INDEX idx_approvals_reviewed_by
+    ON approvals(reviewed_by);
+
+CREATE INDEX idx_experiments_project
+    ON experiments(project_id);
+
+CREATE INDEX idx_evaluation_runs_task
+    ON evaluation_runs(task_id);
+
+CREATE INDEX idx_evaluation_runs_run
+    ON evaluation_runs(run_id);
+
+CREATE INDEX idx_memories_task
+    ON memories(task_id);
+
+CREATE INDEX idx_capability_gaps_task
+    ON capability_gaps(task_id);
+
+CREATE INDEX idx_capability_gaps_run
+    ON capability_gaps(run_id);
+
+
 -- Add a vector index after confirming the embedding model and dimensions.
 -- The VECTOR(1536) dimension above is a provisional design assumption.
