@@ -1,3 +1,15 @@
+# AEGIS Threat Model
+
+## Purpose and Scope
+
+This document identifies security threats, required controls, verification requirements, and unresolved security decisions for the AEGIS platform.
+
+It covers the planner and agent runtime, tool execution, Tool Forge, the Jev Decision Layer, external integrations, memory and retrieval, approvals, project access, audit records, evaluation, and deployment operations.
+
+Documented controls are requirements, not proof of implementation. A control is considered implemented only after its behavior has been verified through appropriate tests and operational checks.
+
+## 1. Side-Effect Inventory
+
 | Action category | Examples in AEGIS |
 |---|---|
 | Code execution | Run generated Python, shell, tests, or repository code |
@@ -13,11 +25,9 @@
 | Deployment and operations | Change deployment configuration, trigger CI/CD, or execute operational actions |
 | Security testing | Run authorized red-team checks and security scans |
 
+## 2. Threat Scenarios and Required Controls
 
-
-## Threat Scenarios and Required Controls
-
-### 1. Threat inventory
+### 2.1 Threat Inventory
 
 | ID | Threat scenario | Required controls | Verification |
 |---|---|---|---|
@@ -28,8 +38,8 @@
 | T-05 | Jev returns an incorrect or manipulated decision | Treat Choice, Score, and Noul outputs as advisory; validate outputs; apply deterministic policy enforcement independently | Low-confidence, adversarial-input, and incorrect-decision tests |
 | T-06 | Credentials or sensitive data leak through prompts, tool outputs, or logs | Server-side secret storage, redaction, restricted access, safe logging, controlled provider data exposure | Seeded-secret leakage tests |
 | T-07 | An external integration changes production data without authorization | Explicit permissions, risk classification, approval where required, scoped credentials, audit logging | Denied and approved side-effect tests |
-| T-08 | A malicious or malformed API response corrupts task state | Schema validation, bounded inputs, safe parsing, transactional persistence, error handling | Malformed-response tests |
-| T-09 | A user accesses another user's tasks, approvals, or artifacts | Authentication, authorization checks on every protected resource, tenant isolation where applicable | Cross-user access tests |
+| T-08 | A malformed API response corrupts task state | Schema validation, bounded inputs, safe parsing, transactional persistence, error handling | Malformed-response tests |
+| T-09 | A user accesses another project's tasks, approvals, or artifacts | Authentication, authorization checks on every protected resource, project isolation | Cross-project access tests |
 | T-10 | Repeated requests exhaust compute, provider budgets, or service capacity | Rate limits, timeouts, bounded retries, concurrency limits, budget enforcement | Load and abuse tests |
 | T-11 | An agent repeats a non-idempotent action after a timeout or retry | Idempotency keys where applicable, operation state tracking, duplicate-action prevention | Retry and duplicate-submission tests |
 | T-12 | A forged or compromised tool remains available after discovery | Immediate revocation, disabled-tool checks at execution time, version history, incident audit trail | Revocation and subsequent-call tests |
@@ -37,7 +47,7 @@
 | T-14 | An unreviewed agent run triggers deployment or other high-impact operations | Deployment policy gates, explicit authorization, human approval where required, no automatic production deployment from unreviewed runs | Blocked-deployment tests |
 | T-15 | Audit records are missing or expose sensitive information | Structured audit events, restricted access, secret redaction, failure monitoring | Audit completeness and redaction tests |
 
-### 2. Non-negotiable enforcement rules
+### 2.2 Non-Negotiable Enforcement Rules
 
 1. Jev is advisory and must never be the sole authorization gate for a side-effecting action.
 2. The deterministic Policy Engine makes the binding allow, deny, or approval decision.
@@ -50,7 +60,7 @@
 9. Agent-generated content, tool descriptions, retrieved documents, and external responses are untrusted inputs.
 10. Security failures must fail closed for protected operations.
 
-### 3. Threat-model assumptions
+### 2.3 Threat-Model Assumptions
 
 - All external content and model-generated content may be malicious or incorrect.
 - Model confidence does not establish authorization or safety.
@@ -59,70 +69,66 @@
 - Every security-sensitive decision and side effect must produce an appropriately redacted audit record.
 - Production credentials and production data must remain outside candidate-tool testing environments.
 
-### 4. Open questions to resolve during architecture design
+### 2.4 Open Architecture Questions
 
 - What sandbox technology and isolation boundary will be used?
 - Which tool categories require mandatory human approval?
-- How will authentication, authorization, and tenant isolation be implemented?
+- How will authentication, authorization, and project isolation be implemented?
 - How will audit events be protected against unauthorized modification?
 - What are the default resource limits, provider budgets, and retry limits?
 - Which external integrations are permitted to access production systems?
 
 These questions remain unresolved until the architecture and configuration are explicitly defined and verified.
 
-
-
-## 5. Jev Decision Layer and Tool Forge Specific Risks
-
-### 5.1 Jev Decision Layer
+## 3. Jev Decision Layer Risks
 
 | ID | Risk | Worst-case failure | Required gate or mitigation |
 |---|---|---|---|
-| J-01 | Overconfident incorrect decision | A wrong classification influences routing, scoring, or an action pre-screen | Confidence thresholds, held-out calibration tests, and escalation to System 2 or human review |
+| J-01 | Overconfident incorrect decision | A wrong classification influences routing, scoring, or an action pre-screen | Confidence thresholds, held-out calibration tests, escalation to System 2 or human review |
 | J-02 | Adversarial state manipulation | Crafted state data causes Jev to produce a misleading answer | Validate and bound state inputs; treat supplied state as potentially adversarial; enforce deterministic policy independently |
 | J-03 | False low-risk classification | Jev classifies a dangerous action as safe | Policy Engine independently evaluates the action and makes the binding allow/deny/approval decision |
 | J-04 | Provider outage or access interruption | Jev calls fail and interrupt task execution | Swappable DecisionProvider interface and tested LocalDecisionProvider fallback |
-| J-05 | Confidence threshold misconfiguration | Too many unsafe decisions are accepted, or necessary escalations are missed | Configurable thresholds, conservative defaults, calibration evaluation, and versioned configuration |
+| J-05 | Confidence threshold misconfiguration | Unsafe decisions are accepted or necessary escalations are missed | Configurable thresholds, conservative defaults, calibration evaluation, versioned configuration |
 | J-06 | Unreliable decision telemetry | Incorrect conclusions are drawn about agreement, calibration, latency, or cost | Log state summary, question type, answer, confidence, escalation, outcome, and agreement |
-| J-07 | Proprietary provider assumptions | Provider changes break the rest of the application | Keep Jev behind the DecisionProvider interface; do not depend on undocumented internals |
-| J-08 | Unverified performance claims | Project reports claim speed or cost improvements not measured on AEGIS workloads | Compare measured latency and cost against an LLM-only baseline |
+| J-07 | Proprietary provider assumptions | Provider changes break the rest of the application | Keep Jev behind the DecisionProvider interface; avoid undocumented internals |
+| J-08 | Unverified performance claims | Reports claim speed or cost improvements not measured on AEGIS workloads | Compare measured latency and cost against an LLM-only baseline |
 
-**Jev enforcement rules**
+### 3.1 Jev Enforcement Rules
 
 1. Jev is advisory; it never replaces deterministic Policy Engine enforcement or required human approval.
 2. Low confidence must trigger the configured escalation or fallback path.
-3. A provider failure must not silently convert an uncertain decision into permission to execute.
+3. Provider failure must not silently convert an uncertain decision into permission to execute.
 4. Decision logs must support independent calibration and agreement analysis.
 5. Evaluate Jev on held-out labeled data and crafted/adversarial states.
 6. Measure actual AEGIS latency and cost; do not present provider-reported gains as AEGIS results.
 
-### 5.2 Tool Forge
+## 4. Tool Forge Risks
 
 | ID | Risk | Worst-case failure | Required gate or mitigation |
 |---|---|---|---|
-| F-01 | Malicious candidate generation | Generated code steals secrets, modifies files, or attempts network access | Isolated sandbox, restricted capabilities, resource limits, and static security analysis |
-| F-02 | Unsafe candidate passes incomplete tests | A vulnerable tool is promoted and executes against real systems | Independent sandbox tests, static analysis, deterministic promotion gate, and required approval |
-| F-03 | Capability-gap prompt injection | Untrusted task descriptions or API schemas manipulate generated code | Treat descriptions and schemas as untrusted; validate generated code and tool contracts independently |
+| F-01 | Malicious candidate generation | Generated code steals secrets, modifies files, or attempts network access | Isolated sandbox, restricted capabilities, resource limits, static security analysis |
+| F-02 | Unsafe candidate passes incomplete tests | A vulnerable tool is promoted and executes against real systems | Independent sandbox tests, static analysis, deterministic promotion gate, required approval |
+| F-03 | Capability-gap prompt injection | Untrusted task descriptions or API schemas manipulate generated code | Treat descriptions and schemas as untrusted; validate generated code and contracts independently |
 | F-04 | Jev incorrectly pre-screens a candidate | A risky candidate is treated as low risk | Jev pre-screen is advisory; deterministic security and policy gates remain mandatory |
-| F-05 | Live side effects during candidate testing | Candidate code modifies production data or calls a live endpoint before approval | Mock or staging targets, sandbox isolation, deny-by-default network access, and no production credentials |
-| F-06 | Forged tool permission escalation | A candidate requests broader privileges than the task requires | Least-privilege permissions, schema validation, policy-configured risk tiers, and execution-time authorization |
+| F-05 | Live side effects during candidate testing | Candidate code modifies production data or calls a live endpoint before approval | Mock or staging targets, sandbox isolation, deny-by-default network access, no production credentials |
+| F-06 | Forged tool permission escalation | A candidate requests broader privileges than required | Least-privilege permissions, schema validation, policy-configured risk tiers, execution-time authorization |
 | F-07 | Unbounded forging loop | Repeated failed candidates exhaust compute, time, or provider budgets | Hard candidate-attempt, sandbox-time, retry, and task-budget limits |
-| F-08 | Compromised or vulnerable promoted version | A previously trusted tool continues causing harm | Version history, revocation, disabled-tool checks at execution time, and incident audit records |
-| F-09 | Unsafe promotion or approval bypass | Candidate code reaches the trusted registry without satisfying required gates | Explicit promotion state machine; deny-by-default transitions; approval bound to the candidate version and risk context |
-| F-10 | Incomplete provenance | The team cannot reconstruct how a tool was generated, tested, or promoted | Record source gap, candidate version, schema, test results, static-analysis results, policy outcome, approval, and promotion/revocation history |
+| F-08 | Compromised or vulnerable promoted version | A previously trusted tool continues causing harm | Version history, revocation, disabled-tool checks at execution time, incident audit records |
+| F-09 | Unsafe promotion or approval bypass | Candidate code reaches the trusted registry without satisfying required gates | Explicit promotion state machine; deny-by-default transitions; approval bound to candidate version and risk context |
+| F-10 | Incomplete provenance | The team cannot reconstruct how a tool was generated, tested, or promoted | Record source gap, candidate, schema, test results, static-analysis results, policy outcome, approval, and promotion/revocation history |
 
-**Tool Forge enforcement rules**
+### 4.1 Tool Forge Enforcement Rules
 
 1. Candidate generation does not grant execution privileges.
 2. Candidate tools must be tested in isolation before promotion.
 3. Static security analysis and deterministic policy checks are mandatory.
-4. Human approval is required wherever the configured risk policy requires it.
+4. Human approval is required wherever configured risk policy requires it.
 5. Jev cannot waive sandbox, policy, or approval requirements.
 6. Candidate generation and sandbox execution must have hard resource limits.
 7. Promoted tools must be versioned, auditable, and revocable.
 8. Unsafe-promotion rate is a critical evaluation metric; the target is zero.
 
-### 5.3 Verification requirements
+## 5. Verification Requirements
 
 The following tests must exist before the corresponding capabilities are considered complete:
 
@@ -130,27 +136,12 @@ The following tests must exist before the corresponding capabilities are conside
 - Simulate Jev provider failure; verify that the configured local fallback works.
 - Supply a crafted/adversarial state; record the result and verify escalation behavior where required.
 - Attempt to promote a candidate that fails sandbox tests or static analysis; promotion must be rejected.
-- Attempt live side effects from candidate-tool testing; the sandbox and network controls must prevent them.
+- Attempt live side effects from candidate-tool testing; sandbox and network controls must prevent them.
 - Exhaust the configured Tool Forge candidate-attempt limit; verify that forging stops.
 - Revoke a promoted tool; verify that subsequent execution attempts are denied.
-- Verify that the decision log and tool-version history contain the records needed for security review and evaluation.
+- Verify that decision logs and tool-version history contain records needed for security review and evaluation.
 
-### 5.4 Outstanding implementation decisions
-
-The following remain design decisions until explicitly specified and tested:
-
-- Sandbox technology and isolation strength.
-- Risk tiers and the actions requiring mandatory approval.
-- Jev confidence thresholds and escalation policy by decision type.
-- Local fallback behavior when the provider and fallback are both unavailable.
-- Tool Forge candidate, time, and budget limits.
-- Promotion-state transitions and approval binding.
-- Audit-record integrity and retention requirements.
-
-No control described here should be considered implemented solely because it is documented.
-
-
-### Tool Forge Audit-Linkage Invariant
+## 6. Tool Forge Audit-Linkage Invariant
 
 - Before a tool version exists, candidate lifecycle events may reference the candidate only.
 - Once a forged tool version exists, events concerning that version must reference both the originating candidate and the resulting tool version.
@@ -160,21 +151,59 @@ No control described here should be considered implemented solely because it is 
 
 These invariants must be enforced and tested in the Tool Forge audit and promotion services. Database-level protections must be evaluated during database implementation.
 
-### Project Ownership and Membership Consistency
+## 7. Project Ownership and Membership Consistency
 
 - `projects.owner_id` is the authoritative record of project ownership.
 - The project owner's access must remain consistent with the project's membership and authorization model.
-- Project creation must establish the owner and the corresponding owner membership in the same database transaction.
+- Project creation must establish the owner and corresponding owner membership in the same database transaction.
 - Ownership transfers must update the ownership record and corresponding membership state atomically.
 - The application must reject inconsistent ownership or membership changes.
-- Authorization checks must not rely solely on a user's membership role; they must also respect the authoritative project ownership record.
+- Authorization checks must not rely solely on membership role; they must also respect the authoritative project ownership record.
 - These rules must be covered by automated tests before project-level authorization is considered complete.
 
-### Project Ownership Enforcement
+## 8. Project Ownership Enforcement
 
 - Project creation must create the project and its owner membership atomically.
 - Ownership transfer must update the authoritative `projects.owner_id` and corresponding membership roles atomically.
-- The application must validate that the project owner and the membership role agree before completing either operation.
+- The application must validate that the project owner and membership role agree before completing either operation.
 - Automated tests must cover project creation, ownership transfer, failed transactions, and attempts to create inconsistent ownership.
 - During PostgreSQL implementation, evaluate database-level enforcement, including whether a constraint trigger is warranted.
 - Until these controls are implemented and tested, project ownership consistency must not be treated as enforced.
+
+## 9. Project Data Isolation
+
+- Every protected resource access must verify authentication and authorization.
+- A user must not access another project's data by guessing a record ID.
+- Resource relationships must be checked for project consistency when records reference multiple projects, tasks, runs, experiments, or documents.
+- Global platform resources must be distinguished explicitly from project-owned resources.
+- Project-scoped memory and retrieval must not leak content across projects.
+- Automated tests must cover cross-project reads, writes, updates, tool execution, approvals, retrieval, and artifact access.
+- PostgreSQL Row-Level Security may provide defense in depth, but it does not replace application authorization checks.
+- Project isolation must not be considered complete until negative access tests pass.
+
+## 10. Audit-Record Protection and Acceptance Criteria
+
+- Approval transitions must append events in the same transaction as the current-state change.
+- Tool Forge must record candidate, validation, approval, promotion, rejection, and revocation events.
+- Event history must not be modifiable or deletable by ordinary application roles.
+- Sensitive data and credentials must be redacted from audit records.
+- Missing audit events and failed audit writes must be detected and handled.
+- Automated tests must verify audit completeness and unauthorized modification attempts.
+- Documentation of an audit requirement is not evidence that the requirement has been implemented.
+
+## 11. Outstanding Implementation Decisions
+
+The following remain design decisions until explicitly specified and tested:
+
+- Sandbox technology and isolation strength.
+- Risk tiers and actions requiring mandatory approval.
+- Jev confidence thresholds and escalation policy by decision type.
+- Local fallback behavior when both the provider and fallback are unavailable.
+- Tool Forge candidate, time, and budget limits.
+- Promotion-state transitions and approval binding.
+- Audit-record integrity and retention requirements.
+- Global versus project-scoped resource ownership.
+- Embedding model, vector dimensions, and vector-index type.
+- Whether database triggers or Row-Level Security will enforce selected invariants.
+
+No control described here should be considered implemented solely because it is documented.
