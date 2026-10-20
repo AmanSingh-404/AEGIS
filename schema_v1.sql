@@ -282,5 +282,47 @@ CREATE INDEX idx_capability_gaps_run
     ON capability_gaps(run_id);
 
 
+-- Valid state constraints for approvals and Tool Forge lifecycle.
+-- These validate status values, not transition authorization.
+
+ALTER TABLE approvals
+    ADD CONSTRAINT chk_approvals_status
+    CHECK (status IN (
+        'pending',
+        'approved',
+        'rejected',
+        'cancelled'
+    ));
+
+ALTER TABLE tool_candidates
+    ADD CONSTRAINT chk_tool_candidates_status
+    CHECK (status IN (
+        'drafted',
+        'testing',
+        'validated',
+        'rejected',
+        'promoted'
+    ));
+
+ALTER TABLE tool_versions
+    ADD CONSTRAINT chk_tool_versions_promotion_status
+    CHECK (promotion_status IN (
+        'pending',
+        'approved',
+        'promoted',
+        'rejected',
+        'revoked'
+    ));
+
+-- A revoked version must record when revocation occurred.
+ALTER TABLE tool_versions
+    ADD CONSTRAINT chk_tool_versions_revocation_timestamp
+    CHECK (
+        (promotion_status = 'revoked' AND revoked_at IS NOT NULL)
+        OR
+        (promotion_status <> 'revoked')
+    );
+
+
 -- Add a vector index after confirming the embedding model and dimensions.
 -- The VECTOR(1536) dimension above is a provisional design assumption.
