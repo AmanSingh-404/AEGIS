@@ -222,6 +222,21 @@ CREATE TABLE tool_candidates (
 );
 
 
+ALTER TABLE tool_candidates
+    ADD CONSTRAINT chk_tool_candidates_status
+    CHECK (
+        status IN (
+            'drafted',
+            'sandboxed',
+            'screened',
+            'pending-approval',
+            'promoted',
+            'rejected'
+        )
+    );
+
+
+
 CREATE TABLE tool_versions (
     id UUID PRIMARY KEY,
     tool_id UUID NOT NULL REFERENCES tools(id),
