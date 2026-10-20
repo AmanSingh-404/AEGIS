@@ -402,14 +402,19 @@ ALTER TABLE tool_versions
         'revoked'
     ));
 
--- A revoked version must record when revocation occurred.
+
+-- Keep revocation status and timestamp consistent.
 ALTER TABLE tool_versions
     ADD CONSTRAINT chk_tool_versions_revocation_timestamp
     CHECK (
         (promotion_status = 'revoked' AND revoked_at IS NOT NULL)
         OR
-        (promotion_status <> 'revoked')
+        (
+            promotion_status <> 'revoked'
+            AND revoked_at IS NULL
+        )
     );
+
 
 
 -- Add a vector index after confirming the embedding model and dimensions.
