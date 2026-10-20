@@ -208,8 +208,15 @@ CREATE TABLE tool_versions (
     promotion_status TEXT NOT NULL,
     revoked_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_tool_versions_tool_version
     UNIQUE (tool_id, version)
 );
+
+ALTER TABLE tools
+    ADD CONSTRAINT fk_tools_current_version
+    FOREIGN KEY (id, version)
+    REFERENCES tool_versions (tool_id, version)
+    DEFERRABLE INITIALLY DEFERRED;
 
 
 CREATE TABLE decision_log (
