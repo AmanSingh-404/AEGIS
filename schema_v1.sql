@@ -25,6 +25,28 @@ CREATE TABLE projects (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+
+CREATE TABLE project_members (
+    project_id UUID NOT NULL REFERENCES projects(id),
+    user_id UUID NOT NULL REFERENCES users(id),
+    role TEXT NOT NULL CHECK (
+        role IN (
+            'owner',
+            'admin',
+            'developer',
+            'reviewer',
+            'viewer'
+        )
+    ),
+    added_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (project_id, user_id)
+);
+
+CREATE INDEX idx_project_members_user
+    ON project_members(user_id);
+
+
 CREATE TABLE tasks (
     id UUID PRIMARY KEY,
     project_id UUID NOT NULL REFERENCES projects(id),
