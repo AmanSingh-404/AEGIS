@@ -113,6 +113,32 @@ CREATE TABLE approvals (
     reviewed_at TIMESTAMPTZ
 );
 
+
+CREATE TABLE approval_events (
+    id UUID PRIMARY KEY,
+    approval_id UUID NOT NULL REFERENCES approvals(id),
+    event_type TEXT NOT NULL CHECK (
+        event_type IN (
+            'requested',
+            'approved',
+            'rejected',
+            'cancelled',
+            'reassigned'
+        )
+    ),
+    actor_id UUID REFERENCES users(id),
+    reason TEXT,
+    event_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_approval_events_approval
+    ON approval_events(approval_id);
+
+CREATE INDEX idx_approval_events_created_at
+    ON approval_events(created_at);
+
+
 CREATE TABLE experiments (
     id UUID PRIMARY KEY,
     project_id UUID REFERENCES projects(id),
