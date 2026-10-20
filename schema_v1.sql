@@ -192,9 +192,11 @@ CREATE TABLE tool_candidates (
     reviewed_at TIMESTAMPTZ
 );
 
+
 CREATE TABLE tool_versions (
     id UUID PRIMARY KEY,
     tool_id UUID NOT NULL REFERENCES tools(id),
+    candidate_id UUID UNIQUE REFERENCES tool_candidates(id),
     version TEXT NOT NULL,
     implementation TEXT NOT NULL,
     schema JSONB NOT NULL,
@@ -205,6 +207,7 @@ CREATE TABLE tool_versions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (tool_id, version)
 );
+
 
 CREATE TABLE decision_log (
     id UUID PRIMARY KEY,
