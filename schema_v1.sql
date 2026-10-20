@@ -48,6 +48,34 @@ CREATE TABLE runs (
     error JSONB
 );
 
+
+ALTER TABLE tasks
+    ADD CONSTRAINT chk_tasks_status
+    CHECK (
+        status IN (
+            'pending',
+            'running',
+            'awaiting_approval',
+            'completed',
+            'failed',
+            'cancelled'
+        )
+    );
+
+ALTER TABLE runs
+    ADD CONSTRAINT chk_runs_status
+    CHECK (
+        status IN (
+            'pending',
+            'running',
+            'awaiting_approval',
+            'completed',
+            'failed',
+            'cancelled'
+        )
+    );
+
+
 CREATE TABLE run_events (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     run_id UUID NOT NULL REFERENCES runs(id),
