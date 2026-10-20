@@ -232,6 +232,43 @@ CREATE TABLE decision_log (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+
+CREATE TABLE tool_audit_events (
+    id UUID PRIMARY KEY,
+    candidate_id UUID REFERENCES tool_candidates(id),
+    tool_version_id UUID REFERENCES tool_versions(id),
+    event_type TEXT NOT NULL CHECK (
+        event_type IN (
+            'candidate_created',
+            'static_analysis_completed',
+            'sandbox_validation_completed',
+            'jev_prescreen_completed',
+            'review_approved',
+            'promotion_approved',
+            'promotion_rejected',
+            'version_promoted',
+            'version_revoked'
+        )
+    ),
+    actor_id UUID REFERENCES users(id),
+    details JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (
+        candidate_id IS NOT NULL
+        OR tool_version_id IS NOT NULL
+    )
+);
+
+CREATE INDEX idx_tool_audit_events_candidate
+    ON tool_audit_events(candidate_id);
+
+CREATE INDEX idx_tool_audit_events_version
+    ON tool_audit_events(tool_version_id);
+
+CREATE INDEX idx_tool_audit_events_created_at
+    ON tool_audit_events(created_at);
+
+
 -- Initial indexes for common lookups and foreign-key joins.
 CREATE INDEX idx_projects_owner ON projects(owner_id);
 CREATE INDEX idx_tasks_project ON tasks(project_id);
