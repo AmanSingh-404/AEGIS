@@ -160,7 +160,7 @@ CREATE TABLE chunks (
     document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     chunk_index INTEGER NOT NULL CHECK (chunk_index >= 0),
     content TEXT NOT NULL,
-    embedding VECTOR(1536),
+    embedding VECTOR,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
     UNIQUE (document_id, chunk_index)
 );
