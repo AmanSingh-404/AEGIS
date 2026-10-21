@@ -1,0 +1,47 @@
+﻿# Secrets and environment configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+ENV/
+dist/
+build/
+
+# Node.js / frontend
+node_modules/
+.next/
+.nuxt/
+out/
+coverage/
+
+# Local databases and generated data
+*.sqlite
+*.sqlite3
+*.db
+data/
+artifacts/
+logs/
+*.log
+
+# IDE and operating system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local tooling
+.terraform/
