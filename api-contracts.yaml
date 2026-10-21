@@ -1,0 +1,861 @@
+openapi: 3.1.0
+info:
+  title: AEGIS API
+  version: 1.0.0-draft
+  description: >
+    Design-only API contract for AEGIS, based on Section 17 of the AEGIS
+    Jev and Tool Forge Project Specification. Request and response schemas
+    are provisional stubs for review; they define shapes, not implementation logic.
+servers:
+  - url: http://localhost:8000
+    description: Local development server (proposed)
+tags:
+  - name: Tasks
+  - name: Runs
+  - name: Approvals
+  - name: Evaluations
+  - name: Experiments
+  - name: Health
+  - name: Tool Forge
+  - name: Tools
+  - name: Decisions
+
+paths:
+  /api/v1/tasks:
+    post:
+      tags: [Tasks]
+      summary: Create a task
+      operationId: createTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/runs:
+    post:
+      tags: [Runs]
+      summary: Start agent execution
+      operationId: startRun
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunCreate'
+      responses:
+        '202':
+          description: Run accepted for execution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Referenced task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/runs/{id}:
+    get:
+      tags: [Runs]
+      summary: Retrieve execution state
+      operationId: getRun
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: Current run state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/runs/{id}/events:
+    get:
+      tags: [Runs]
+      summary: Stream run trace events
+      description: >
+        The specification calls for WebSocket or Server-Sent Events (SSE).
+        This draft selects SSE as the provisional HTTP contract; confirm before implementation.
+      operationId: streamRunEvents
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: Server-Sent Events stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Stream of serialized RunEvent records
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/approvals/{id}:
+    post:
+      tags: [Approvals]
+      summary: Approve or reject a risky action
+      operationId: decideApproval
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalDecision'
+      responses:
+        '200':
+          description: Approval decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Approval is no longer pending or cannot transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/evaluations:
+    get:
+      tags: [Evaluations]
+      summary: Query evaluation results
+      operationId: listEvaluations
+      parameters:
+        - name: run_id
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Evaluation results page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationList'
+
+  /api/v1/experiments:
+    post:
+      tags: [Experiments]
+      summary: Create an experiment
+      operationId: createExperiment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExperimentCreate'
+      responses:
+        '201':
+          description: Experiment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Experiment'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/health:
+    get:
+      tags: [Health]
+      summary: Service health
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+
+  /api/v1/tool-forge/gaps:
+    post:
+      tags: [Tool Forge]
+      summary: Log a detected capability gap
+      description: >
+        Section 17 lists POST for logging or querying detected capability gaps.
+        This draft models the POST operation as creating/logging a gap. A separate
+        query endpoint is not specified by Section 17 and is not added here.
+      operationId: createCapabilityGap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapabilityGapCreate'
+      responses:
+        '201':
+          description: Capability gap logged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapabilityGap'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/tool-forge/candidates:
+    post:
+      tags: [Tool Forge]
+      summary: Create a candidate tool synthesis run
+      operationId: createToolCandidate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolCandidateCreate'
+      responses:
+        '202':
+          description: Candidate synthesis accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolCandidate'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/tool-forge/candidates/{id}:
+    get:
+      tags: [Tool Forge]
+      summary: Retrieve candidate status
+      operationId: getToolCandidate
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: Candidate status and summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolCandidate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/tools/{id}/revoke:
+    post:
+      tags: [Tools]
+      summary: Revoke a promoted tool
+      operationId: revokeTool
+      description: >
+        Applies to forged and developer-registered tools. Revocation disables
+        the tool; the actual authorization and enforcement rules are implementation work.
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolRevocation'
+      responses:
+        '200':
+          description: Tool revocation recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolRevocationResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Tool is already revoked or cannot be revoked in its current state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/decisions/jev:
+    post:
+      tags: [Decisions]
+      summary: Submit typed decision request
+      operationId: submitJevDecision
+      description: >
+        Submit state and typed question(s) to the Jev Decision Layer.
+        Jev output is advisory and must not replace deterministic policy enforcement.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      responses:
+        '200':
+          description: Decision response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '503':
+          description: Decision provider unavailable and no usable fallback result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/decisions:
+    get:
+      tags: [Decisions]
+      summary: Query decision log
+      operationId: listDecisions
+      parameters:
+        - name: decision_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [choice, score, noul]
+        - name: escalated
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Decision log page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionList'
+
+components:
+  parameters:
+    ResourceId:
+      name: id
+      in: path
+      required: true
+      description: Resource identifier; exact format to be standardized during implementation.
+      schema:
+        type: string
+        minLength: 1
+
+  responses:
+    BadRequest:
+      description: Request could not be processed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+      additionalProperties: false
+
+    ValidationError:
+      type: object
+      required: [code, message, details]
+      properties:
+        code:
+          type: string
+          const: validation_error
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+            required: [message]
+        request_id:
+          type: string
+      additionalProperties: false
+
+    TaskCreate:
+      type: object
+      required: [objective]
+      properties:
+        objective:
+          type: string
+          minLength: 1
+          description: User's requested objective.
+        project_id:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties: true
+      additionalProperties: false
+
+    Task:
+      type: object
+      required: [id, objective, status, created_at]
+      properties:
+        id:
+          type: string
+        project_id:
+          type: [string, 'null']
+        objective:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, awaiting_approval, completed, failed, cancelled]
+        created_at:
+          type: string
+          format: date-time
+      additionalProperties: true
+
+    RunCreate:
+      type: object
+      required: [task_id]
+      properties:
+        task_id:
+          type: string
+        agent_id:
+          type: string
+        model_id:
+          type: string
+        input:
+          type: object
+          additionalProperties: true
+        idempotency_key:
+          type: string
+      additionalProperties: false
+
+    Run:
+      type: object
+      required: [id, task_id, status, created_at]
+      properties:
+        id:
+          type: string
+        task_id:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, awaiting_approval, completed, failed, cancelled]
+        result:
+          type: [object, 'null']
+          additionalProperties: true
+        error:
+          type: [object, 'null']
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type: [string, 'null']
+          format: date-time
+        finished_at:
+          type: [string, 'null']
+          format: date-time
+      additionalProperties: true
+
+    RunEvent:
+      type: object
+      required: [id, run_id, event_type, created_at]
+      properties:
+        id:
+          type: string
+        run_id:
+          type: string
+        event_type:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+
+    ApprovalDecision:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approve, reject]
+        reason:
+          type: string
+      additionalProperties: false
+
+    Approval:
+      type: object
+      required: [id, status, updated_at]
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected, cancelled]
+        reason:
+          type: [string, 'null']
+        updated_at:
+          type: string
+          format: date-time
+      additionalProperties: true
+
+    Evaluation:
+      type: object
+      required: [id, status, created_at]
+      properties:
+        id:
+          type: string
+        run_id:
+          type: [string, 'null']
+        status:
+          type: string
+        metrics:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+      additionalProperties: true
+
+    EvaluationList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evaluation'
+        next_cursor:
+          type: [string, 'null']
+      additionalProperties: false
+
+    ExperimentCreate:
+      type: object
+      required: [name, configuration]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        configuration:
+          type: object
+          additionalProperties: true
+        baseline_run_id:
+          type: string
+      additionalProperties: false
+
+    Experiment:
+      type: object
+      required: [id, name, status, created_at]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        configuration:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+      additionalProperties: true
+
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        version:
+          type: string
+        checks:
+          type: object
+          additionalProperties:
+            type: string
+      additionalProperties: false
+
+    CapabilityGapCreate:
+      type: object
+      required: [description, failure_reason]
+      properties:
+        task_id:
+          type: string
+        run_id:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+        attempted_approach:
+          type: string
+        failure_reason:
+          type: string
+        description:
+          type: string
+        priority:
+          type: number
+          description: Optional priority score; ranking semantics to be specified.
+      additionalProperties: false
+
+    CapabilityGap:
+      type: object
+      required: [id, description, status, created_at]
+      properties:
+        id:
+          type: string
+        task_id:
+          type: [string, 'null']
+        run_id:
+          type: [string, 'null']
+        description:
+          type: string
+        status:
+          type: string
+          enum: [detected, investigating, tool_candidate_created, resolved, unresolved, dismissed]
+        priority:
+          type: [number, 'null']
+        created_at:
+          type: string
+          format: date-time
+      additionalProperties: true
+
+    ToolCandidateCreate:
+      type: object
+      required: [capability_gap_id, description]
+      properties:
+        capability_gap_id:
+          type: string
+        description:
+          type: string
+        requested_permissions:
+          type: array
+          items:
+            type: string
+        input_schema:
+          type: object
+          additionalProperties: true
+        output_schema:
+          type: object
+          additionalProperties: true
+        constraints:
+          type: object
+          additionalProperties: true
+      additionalProperties: false
+
+    ToolCandidate:
+      type: object
+      required: [id, status, created_at]
+      properties:
+        id:
+          type: string
+        capability_gap_id:
+          type: string
+        status:
+          type: string
+          enum: [drafted, sandboxed, screened, pending-approval, promoted, rejected]
+        summary:
+          type: string
+        sandbox_result:
+          type: [object, 'null']
+          additionalProperties: true
+        static_analysis_result:
+          type: [object, 'null']
+          additionalProperties: true
+        pre_screen_result:
+          type: [object, 'null']
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+      additionalProperties: true
+
+    ToolRevocation:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+        revoked_by:
+          type: string
+      additionalProperties: false
+
+    ToolRevocationResult:
+      type: object
+      required: [tool_id, status, revoked_at]
+      properties:
+        tool_id:
+          type: string
+        status:
+          type: string
+          const: revoked
+        revoked_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+
+    DecisionRequest:
+      type: object
+      required: [state, decision_type, questions]
+      properties:
+        state:
+          type: object
+          additionalProperties: true
+        decision_type:
+          type: string
+          enum: [choice, score, noul]
+        questions:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        options:
+          type: array
+          items:
+            type: string
+          description: Candidate options for Choice decisions.
+        scale:
+          type: object
+          properties:
+            min:
+              type: number
+            max:
+              type: number
+          required: [min, max]
+          description: Required by the Score primitive when applicable.
+        context:
+          type: object
+          additionalProperties: true
+      additionalProperties: false
+
+    DecisionResponse:
+      type: object
+      required: [decision_type, answer, confidence, provider]
+      properties:
+        decision_type:
+          type: string
+          enum: [choice, score, noul]
+        answer:
+          description: Typed answer; concrete type depends on decision_type.
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        provider:
+          type: string
+          description: Provider used, such as Jev or the configured local fallback.
+        escalated:
+          type: boolean
+        escalation_outcome:
+          type: [string, 'null']
+        decision_log_id:
+          type: string
+      additionalProperties: false
+
+    Decision:
+      type: object
+      required: [id, decision_type, answer, confidence, created_at]
+      properties:
+        id:
+          type: string
+        decision_type:
+          type: string
+          enum: [choice, score, noul]
+        state_summary:
+          type: string
+        answer:
+          description: Stored typed decision answer.
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        escalated:
+          type: boolean
+        escalation_outcome:
+          type: [string, 'null']
+        agreement:
+          type: [boolean, 'null']
+        created_at:
+          type: string
+          format: date-time
+      additionalProperties: true
+
+    DecisionList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Decision'
+        next_cursor:
+          type: [string, 'null']
+      additionalProperties: false
