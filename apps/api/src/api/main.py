@@ -1,5 +1,6 @@
 ﻿import structlog
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 structlog.configure(
     processors=[
@@ -17,6 +18,14 @@ app = FastAPI(
     title="AEGIS API",
     description="Agentic AI Engineering, Governance, Intelligence, and Security Platform",
     version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=False,
+    allow_methods=["GET"],
+    allow_headers=["*"],
 )
 
 
