@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     environment: Literal["development", "test", "production"] = "development"
     log_level: str = "INFO"
+    cors_origins: list[str] = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:13000",
+]
 
     database_url: str = "postgresql+psycopg://aegis:aegis@localhost:5432/aegis"
     redis_url: str = "redis://localhost:6379/0"
