@@ -2,14 +2,15 @@
 import uuid
 
 import structlog
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.config import get_settings
-from api.database import engine
+from api.database import engine, get_db
 
 
 request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar(
@@ -97,6 +98,21 @@ async def readiness() -> dict[str, str]:
 
     logger.info("readiness_check", status="ready", dependency="postgres")
     return {"status": "ready", "database": "ok"}
+
+
+@app.get("/api/v1/health/db-session", tags=["Health"])
+def database_session_check(db: Session = Depends(get_db)) -> dict[str, str]:
+    try:
+        db.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        logger.warning("database_session_check_failed")
+        raise HTTPException(
+            status_code=503,
+            detail={"status": "not_ready", "dependency": "postgres"},
+        ) from None
+
+    logger.info("database_session_check", status="ok")
+    return {"status": "ok"}
 
 
 def main() -> None:
