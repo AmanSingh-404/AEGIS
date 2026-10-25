@@ -1,10 +1,16 @@
-﻿import structlog
-from fastapi import FastAPI
+﻿import contextvars
+import uuid
+
+import structlog
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from api.config import get_settings
-import contextvars
-from fastapi import FastAPI, Request
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from api.config import get_settings
+from api.database import engine
+
 
 request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar(
     "request_id", default=""
@@ -36,20 +42,18 @@ structlog.configure(
 )
 
 logger = structlog.get_logger()
-
 settings = get_settings()
+
 app = FastAPI(
     title=settings.app_name,
     description="Agentic AI Engineering, Governance, Intelligence, and Security Platform",
     version=settings.app_version,
 )
 
+
 class RequestContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        request_id = request.headers.get("X-Request-ID") or __import__(
-            "uuid"
-        ).uuid4().hex
-
+        request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
         request_token = request_id_var.set(request_id)
         run_token = run_id_var.set(request.headers.get("X-Run-ID", ""))
 
@@ -77,6 +81,22 @@ app.add_middleware(
 async def health() -> dict[str, str]:
     logger.info("health_check", endpoint="/api/v1/health", status="ok")
     return {"status": "ok"}
+
+
+@app.get("/api/v1/health/ready", tags=["Health"])
+async def readiness() -> dict[str, str]:
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        logger.warning("readiness_check_failed", dependency="postgres")
+        raise HTTPException(
+            status_code=503,
+            detail={"status": "not_ready", "dependency": "postgres"},
+        ) from None
+
+    logger.info("readiness_check", status="ready", dependency="postgres")
+    return {"status": "ready", "database": "ok"}
 
 
 def main() -> None:
