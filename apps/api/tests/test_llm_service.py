@@ -92,6 +92,18 @@ async def test_aclose_closes_provider_client() -> None:
 
 
 @pytest.mark.anyio
+async def test_aclose_propagates_provider_cleanup_error() -> None:
+    provider = FakeProvider()
+    provider.aclose.side_effect = RuntimeError("provider cleanup failed")
+    service = LLMService(provider=provider)
+
+    with pytest.raises(RuntimeError, match="provider cleanup failed"):
+        await service.aclose()
+
+    provider.aclose.assert_awaited_once()
+
+
+@pytest.mark.anyio
 async def test_aclose_supports_provider_without_close_method() -> None:
     class ProviderWithoutClose:
         name = "fake"
