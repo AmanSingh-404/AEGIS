@@ -99,3 +99,19 @@ def test_provider_protocol_requires_name_and_generate() -> None:
     provider = ExampleProvider()
 
     assert isinstance(provider, LLMProvider)
+
+
+def test_response_rejects_empty_provider_and_model_names() -> None:
+    base_values = {
+        "content": "ok",
+        "provider": "fake",
+        "model": "test-model",
+        "usage": LLMUsage(input_tokens=1, output_tokens=1),
+        "latency_ms": 1.0,
+    }
+
+    with pytest.raises(ValidationError):
+        LLMResponse(**{**base_values, "provider": ""})
+
+    with pytest.raises(ValidationError):
+        LLMResponse(**{**base_values, "model": ""})
