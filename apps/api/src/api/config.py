@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     environment: Literal["development", "test", "production"] = "development"
     log_level: str = "INFO"
+    llm_provider: Literal["groq", "gemini", "mistral"] = "groq"
     cors_origins: list[str] = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
