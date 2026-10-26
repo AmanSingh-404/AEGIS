@@ -168,6 +168,40 @@ async def test_generate_enforces_request_timeout(
             make_request(timeout_seconds=0.01)
         )
 
+async def test_generate_propagates_cancellation_during_sdk_call(
+    mock_client: SimpleNamespace,
+) -> None:
+    import asyncio
+    import threading
+
+    sdk_started = threading.Event()
+    allow_sdk_to_finish = threading.Event()
+    sdk_finished = threading.Event()
+
+    def blocking_generate_content(**kwargs: object) -> SimpleNamespace:
+        sdk_started.set()
+        try:
+            allow_sdk_to_finish.wait(timeout=5)
+            return make_response()
+        finally:
+            sdk_finished.set()
+
+    mock_client.models.generate_content.side_effect = blocking_generate_content
+    provider = GeminiProvider(client=mock_client)
+    task = asyncio.create_task(provider.generate(make_request()))
+
+    try:
+        started = await asyncio.to_thread(sdk_started.wait, 2)
+        assert started, "The SDK call did not start in time."
+
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    finally:
+        allow_sdk_to_finish.set()
+        finished = await asyncio.to_thread(sdk_finished.wait, 2)
+        assert finished, "The mocked SDK worker did not finish."
+
 
 async def test_generate_propagates_sdk_errors(
     mock_client: SimpleNamespace,
