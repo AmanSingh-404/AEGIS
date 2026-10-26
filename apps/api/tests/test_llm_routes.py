@@ -104,7 +104,6 @@ def test_generation_endpoint_returns_normalized_response(enabled_settings) -> No
     assert body["usage"]["input_tokens"] == 3
     assert body["usage"]["output_tokens"] == 5
     service.generate.assert_awaited_once()
-    service.aclose.assert_not_awaited()
 
 
 def test_generation_endpoint_sanitizes_service_initialization_errors(
@@ -173,3 +172,44 @@ def test_generation_endpoint_rejects_invalid_request(enabled_settings) -> None:
 
     assert response.status_code == 422
     service.generate.assert_not_awaited()
+
+
+def test_llm_service_dependency_closes_service_on_exit() -> None:
+    from unittest.mock import patch
+
+    service = type("FakeService", (), {})()
+    service.aclose = AsyncMock()
+
+    async def exercise_dependency() -> None:
+        with patch("api.routes.llm.LLMService", return_value=service):
+            dependency = get_llm_service()
+            provided_service = await anext(dependency)
+            assert provided_service is service
+            await dependency.aclose()
+
+    anyio.run(exercise_dependency)
+
+    service.aclose.assert_awaited_once()
+
+
+def test_llm_service_dependency_closes_service_after_exception() -> None:
+    from unittest.mock import patch
+
+    service = type("FakeService", (), {})()
+    service.aclose = AsyncMock()
+
+    async def exercise_dependency() -> None:
+        with patch("api.routes.llm.LLMService", return_value=service):
+            dependency = get_llm_service()
+            provided_service = await anext(dependency)
+
+            assert provided_service is service
+
+            with pytest.raises(RuntimeError, match="simulated request failure"):
+                await dependency.athrow(
+                    RuntimeError("simulated request failure")
+                )
+
+    anyio.run(exercise_dependency)
+
+    service.aclose.assert_awaited_once()
