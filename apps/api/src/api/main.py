@@ -11,6 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.config import get_settings
 from api.database import engine, get_db
+from api.routes.llm import router as llm_router
 
 
 request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar(
@@ -51,6 +52,8 @@ app = FastAPI(
     version=settings.app_version,
 )
 
+
+app.include_router(llm_router)
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
