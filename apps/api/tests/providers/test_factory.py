@@ -71,3 +71,23 @@ def test_factory_rejects_missing_provider_api_key(
 
     with pytest.raises(ValueError, match="GROQ_API_KEY"):
         create_llm_provider("groq")
+
+
+@pytest.mark.parametrize(
+    ("provider_name", "setting_name", "environment_key"),
+    [
+        ("groq", "groq_api_key", "GROQ_API_KEY"),
+        ("gemini", "gemini_api_key", "GEMINI_API_KEY"),
+        ("mistral", "mistral_api_key", "MISTRAL_API_KEY"),
+    ],
+)
+def test_factory_rejects_missing_credentials_for_each_provider(
+    monkeypatch: pytest.MonkeyPatch,
+    provider_name: str,
+    setting_name: str,
+    environment_key: str,
+) -> None:
+    monkeypatch.setattr(get_settings(), setting_name, None)
+
+    with pytest.raises(ValueError, match=environment_key):
+        create_llm_provider(provider_name)
