@@ -4,6 +4,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from api.config import get_settings
+from api.models import Base
 
 config = context.config
 
@@ -13,9 +14,9 @@ if config.config_file_name is not None:
 settings = get_settings()
 database_url = settings.database_url
 
-# Use the application configuration instead of a hardcoded URL.
-# No ORM metadata is registered yet; the initial schema migration will be explicit.
-target_metadata = None
+# Use application configuration and registered ORM models.
+# This enables Alembic schema comparison; it does not apply migrations.
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
