@@ -68,3 +68,33 @@ def test_invalid_boundary_requests_are_rejected_before_provider_call(
 
     assert response.status_code == 422
     mocked_llm_service.generate.assert_not_awaited()
+
+def test_message_content_at_limit_is_accepted_by_schema() -> None:
+    from api.routes.llm_schemas import LLMGenerateRequest
+
+    payload = {
+        "model": "test-model",
+        "messages": [
+            {"role": "user", "content": "x" * 32000},
+        ],
+    }
+
+    request = LLMGenerateRequest.model_validate(payload)
+
+    assert len(request.messages[0].content) == 32000
+
+
+def test_message_content_over_limit_is_rejected_before_provider_call(
+    mocked_llm_service,
+) -> None:
+    payload = {
+        "model": "test-model",
+        "messages": [
+            {"role": "user", "content": "x" * 32001},
+        ],
+    }
+
+    response = anyio.run(_post_generation, payload)
+
+    assert response.status_code == 422
+    mocked_llm_service.generate.assert_not_awaited()

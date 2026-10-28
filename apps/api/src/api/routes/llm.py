@@ -1,4 +1,4 @@
-﻿"""HTTP endpoints for controlled LLM generation."""
+"""HTTP endpoints for controlled LLM generation."""
 
 from collections.abc import AsyncIterator
 from typing import Annotated
@@ -7,7 +7,7 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from api.config import Settings, get_settings
-from api.providers.schemas import LLMRequest
+from api.providers.schemas import LLMMessage, LLMRequest
 from api.services.llm_service import LLMService
 from api.routes.llm_schemas import LLMGenerateRequest, LLMGenerateResponse
 
@@ -66,7 +66,10 @@ async def generate(
     """Generate a model response using the configured provider."""
     llm_request = LLMRequest(
         model=payload.model,
-        messages=payload.messages,
+        messages=tuple(
+            LLMMessage(role=message.role, content=message.content)
+            for message in payload.messages
+        ),
         temperature=payload.temperature,
         max_tokens=payload.max_tokens,
         timeout_seconds=payload.timeout_seconds,
