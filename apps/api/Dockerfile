@@ -11,14 +11,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock README.md ./
-COPY src/ ./src/
-COPY alembic.ini ./alembic.ini
-COPY migrations/ ./migrations/
+COPY apps/api/pyproject.toml apps/api/uv.lock apps/api/README.md ./
+COPY apps/api/src/ ./src/
+COPY apps/api/alembic.ini ./alembic.ini
+COPY apps/api/migrations/ ./migrations/
+COPY evaluation/ ./evaluation/
 
 RUN uv sync --frozen --no-dev
 
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app"
 
 EXPOSE 8000
 
