@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     llm_provider: Literal["groq", "gemini", "mistral"] = "groq"
     llm_generation_enabled: bool = False
+    execution_reads_enabled: bool = False
     cors_origins: list[str] = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
