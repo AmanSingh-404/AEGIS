@@ -44,3 +44,26 @@ def test_provider_secret_is_not_rendered_in_plain_text() -> None:
 
     assert secret_value not in str(settings.groq_api_key)
     assert secret_value not in repr(settings.groq_api_key)
+
+def test_google_authentication_is_disabled_by_default() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.google_auth_enabled is False
+    assert settings.google_oauth_client_id is None
+
+
+def test_execution_writes_are_disabled_by_default() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.execution_writes_enabled is False
+
+
+def test_google_authentication_can_be_configured() -> None:
+    settings = Settings(
+        _env_file=None,
+        google_auth_enabled=True,
+        google_oauth_client_id="test-client.apps.googleusercontent.com",
+    )
+
+    assert settings.google_auth_enabled is True
+    assert settings.google_oauth_client_id == "test-client.apps.googleusercontent.com"

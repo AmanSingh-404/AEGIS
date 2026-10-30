@@ -1,4 +1,4 @@
-from api.models import Base
+﻿from api.models import Base
 
 
 EXPECTED_INDEXES = {
@@ -32,6 +32,7 @@ EXPECTED_INDEXES = {
     "idx_decision_log_run",
     "idx_decision_log_created",
     "idx_tool_versions_tool",
+    "uq_users_google_subject",
 }
 
 

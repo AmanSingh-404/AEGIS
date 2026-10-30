@@ -55,3 +55,12 @@ def test_project_member_composite_primary_key_and_role_constraint() -> None:
 def test_project_settings_uses_postgresql_jsonb() -> None:
     column_type = Project.__table__.c.settings.type
     assert isinstance(column_type, postgresql.JSONB)
+
+def test_user_google_subject_is_nullable_and_unique() -> None:
+    table = User.__table__
+
+    assert table.c.google_subject.nullable is True
+    assert any(
+        index.name == "uq_users_google_subject" and index.unique
+        for index in table.indexes
+    )

@@ -1,5 +1,4 @@
-
-from functools import lru_cache
+﻿from functools import lru_cache
 from typing import Literal
 
 from pydantic import SecretStr
@@ -20,14 +19,21 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     environment: Literal["development", "test", "production"] = "development"
     log_level: str = "INFO"
+
     llm_provider: Literal["groq", "gemini", "mistral"] = "groq"
     llm_generation_enabled: bool = False
+
+    google_auth_enabled: bool = False
+    google_oauth_client_id: str | None = None
+
     execution_reads_enabled: bool = False
+    execution_writes_enabled: bool = False
+
     cors_origins: list[str] = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:13000",
-]
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:13000",
+    ]
 
     database_url: str = "postgresql+psycopg://aegis:aegis@localhost:5432/aegis"
     redis_url: str = "redis://localhost:6379/0"

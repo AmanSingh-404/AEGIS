@@ -14,11 +14,15 @@ from api.models.base import Base
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (
+        Index("uq_users_google_subject", "google_subject", unique=True),
+    )
 
     id: Mapped[object] = mapped_column(UUID(as_uuid=True), primary_key=True)
     email: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     display_name: Mapped[str | None] = mapped_column(Text)
     identity_provider: Mapped[str | None] = mapped_column(Text)
+    google_subject: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[object] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=False,
