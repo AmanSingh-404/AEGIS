@@ -1,0 +1,8 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import React from 'react';
+import { useApp } from '../../context/AppContext';
+import { Logo } from '../../components/common/Logo';
+export const LandingNav = () => {
+    const { setRoute, openModal, theme, toggleTheme } = useApp();
+    return (_jsx("nav", { className: "landing-nav", "aria-label": "Primary", children: _jsxs("div", { className: "wrap", children: [_jsxs("div", { className: "logo", onClick: () => setRoute('landing'), style: { cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }, children: [_jsx(Logo, { size: 28 }), _jsx("span", { style: { fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: '19px', letterSpacing: '0.02em' }, children: "AEGIS" })] }), _jsxs("div", { className: "links", children: [_jsx("a", { href: "#product", children: "Product" }), _jsx("a", { href: "#domains", children: "Solutions" }), _jsx("a", { href: "#architecture", children: "Developers" }), _jsx("a", { href: "#security-sec", children: "Resources" })] }), _jsxs("div", { style: { display: 'flex', gap: '12px', alignItems: 'center', marginLeft: 'auto' }, children: [_jsx("button", { type: "button", className: "theme-toggle", onClick: toggleTheme, title: theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode', "aria-label": "Toggle theme", children: theme === 'dark' ? '☀️' : '🌙' }), _jsx("button", { type: "button", className: "btn", style: { height: '40px' }, onClick: () => openModal('signin'), children: "Sign in" }), _jsx("button", { type: "button", className: "btn p", style: { height: '40px' }, onClick: () => setRoute('home'), children: "Explore AEGIS" })] })] }) }));
+};
